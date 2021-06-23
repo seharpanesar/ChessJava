@@ -1,0 +1,66 @@
+Challenges
+
+Keeping track of castling rights
+Keeping track of enpassant validity
+Keeping track of squares that are controlled
+
+Driver:
+    - initiates GUI
+    - keeps track of all moves
+    - a main while loop that waits for user input, then calculates minimax move
+        - White plays a move
+        - White's attacking squares are updated in a bitboard. If whites attack squares include a black king, that is a check.
+
+        - Blacks legal moves are updated (Pins on black will be calculated here), taking into account that the black king
+        CANT move into white's attacking squares AND it CANT move pinned pieces
+              - If black is in check, black must either:
+                  - Capture the attacking piece
+                  - Place some piece in the way of the attacking piece and king
+                  - Move the king to a safe square
+              - If black is in double check:
+                  - Move the king to a safe square
+
+              In these 2 scenarios, if it has 0 legal moves, it is in checkmate.
+
+              - If black is not in check, it can move to a legal square:
+                  In this scenario, if no legal moves, then stalemate
+
+
+
+- Board:
+    - This has a 8 by 8 char array to represent the board
+    - Each square on the board is represented with a number 0->63 (top left is 0, bottom right is 63)
+    - updateBoardControl(boolean isWhite): list of squareNums that is controlled by the a color
+        - loops thorugh
+    - Board starts with fields whiteBoardControl and blackBoardControl
+
+
+Square Control
+    - fields
+        - int squareNum
+        - char Piece
+        - boolean isWhite
+
+- Pieces class
+    - This will be the super class of all the pieces
+    - will have get legal moves()
+
+OTHER CHALLENGES
+    - En passant: TODO Maybe in the board class, keep track of all past moves.
+        - If last move was a pawn move that moved up 2 squares AND
+        - that pawn is next to a opposite color pawn AND
+        - both pawns are on 5th rank (OR 3rd)
+        then enpassant is legal
+    - Castling
+        - TODO add 6 booleans initialized in Board class as false:
+            - WKingMove: if king has moved
+            - BKingMove: ...
+            - WQSideRookMove: if rook has moved
+            - WKSideRookMove
+            - WQSideRookMove
+            - WKSideRookMove
+    Pawn promotion:
+        - split into 4 moves, one for each promotion piece.
+
+
+
