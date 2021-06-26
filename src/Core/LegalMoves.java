@@ -13,6 +13,8 @@ public class LegalMoves {
      * If isWhite = true, we are returning whites moves. isWhite = false -> return blacks moves
      */
     public static ArrayList<Move> getAllMoves(Board board, boolean gettingWhiteMoves) {
+        SquareControl.calculateControlGrid(board, !gettingWhiteMoves); // sets up control grid of opposite color, checks and pins
+
         ArrayList<Move> allMoves = new ArrayList<>();
         ArrayList<Piece> piecesToMove = gettingWhiteMoves ? board.getWhitePieces() : board.getBlackPieces();
 
@@ -128,9 +130,11 @@ public class LegalMoves {
                     int diagI = pinnedPieceI + offset[0];
                     int diagJ = pinnedPieceJ + offset[1];
                     int diagNum = diagI * BOARD_LENGTH + diagJ;
+                    char capturePiece = boardRep[diagI][diagJ];
                     if (availableSquares.contains(diagNum) &&
                             isInBounds(diagI, diagJ) &&
-                            isBlackPiece(boardRep[diagI][diagJ]) == pieceIsWhite) {
+                            capturePiece != '-' &&
+                            isBlackPiece(capturePiece) == pieceIsWhite) {
                         if (pawnPromotionFlag) { // pawn promotion case
                             legalMoves.addAll(pawnPromotionMoves(pinnedPiece, diagNum));
                         } else { // normal case
@@ -493,8 +497,6 @@ public class LegalMoves {
      */
 
     private static ArrayList<Move> castlingMoves(Board board, Piece king, boolean color) {
-        SquareControl.calculateControlGrid(board, !color); // sets up control grid of opposite color, checks and pins
-
         ArrayList<Move> moves = new ArrayList<>();
         char[][] representation = board.getRepresentation();
 

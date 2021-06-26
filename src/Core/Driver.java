@@ -1,12 +1,17 @@
 package Core;
 
+import GUI.BoardPanel;
 import GUI.GUIFrame;
 
+import javax.swing.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Driver {
-    static ArrayList<Move> movesPlayed = new ArrayList<>();
+    public static ArrayList<Move> movesPlayed = new ArrayList<>();
+    public static ArrayList<Move> movesAvailable = new ArrayList<>();
+    public static Board mainBoard = new Board(); // initialize board
 
     /* Todo: start here
         - gui
@@ -14,43 +19,35 @@ public class Driver {
         - minimax
      */
 
-    public static void main(String[] args) {
-        Board mainBoard = new Board(); // initialize board
-        boolean whitesTurn = mainBoard.isWhitesTurn();
-
+    public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in); // temporary input
 
-        new GUIFrame();
+        new GUIFrame(mainBoard.getRepresentation());
 
         while (true) {
-            mainBoard.printBoard();
             long start = System.currentTimeMillis();
-
-            ArrayList<Move> moves = LegalMoves.getAllMoves(mainBoard, whitesTurn);
+            movesAvailable = LegalMoves.getAllMoves(mainBoard, mainBoard.isWhitesTurn());
             long end = System.currentTimeMillis();
             System.out.printf("Legal moves calculated in %d milliseconds\n", end-start);
 
-            if (moves.size() == 0) { // mate
+            if (movesAvailable.size() == 0) { // mate
                 if (SquareControl.getChecks().size() == 0) {
                     System.out.println("Draw by stalemate!");
                 }
                 else {
-                    String colorThatWon = whitesTurn ? "Black" : "White";
+                    String colorThatWon = mainBoard.isWhitesTurn() ? "Black" : "White";
                     System.out.println("Checkmate! " + colorThatWon + " won");
                 }
                 break;
             }
 
-            for (Move move : moves) {
-                System.out.println(move);
-            }
             Move toPlay = null;
             boolean flag = true;
             do {
                 System.out.println("\nplay move");
                 String input = scanner.nextLine();
 
-                for (Move move : moves) {
+                for (Move move : movesAvailable) {
                     if (move.toString().equals(input)) {
                         toPlay = move;
                         flag = false;
@@ -65,7 +62,8 @@ public class Driver {
             mainBoard.makeMove(toPlay);
             movesPlayed.add(toPlay);
 
-            whitesTurn = !whitesTurn;
         }
     }
+
+
 }

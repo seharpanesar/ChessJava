@@ -7,8 +7,8 @@ public class Board {
     final int BOARD_LENGTH = 8;
 
     private char[][] representation;
-    private final ArrayList<Piece> whitePieces = new ArrayList<>();
-    private final ArrayList<Piece> blackPieces = new ArrayList<>();
+    private ArrayList<Piece> whitePieces = new ArrayList<>();
+    private ArrayList<Piece> blackPieces = new ArrayList<>();
 
     private boolean whitesTurn;
 
@@ -32,7 +32,6 @@ public class Board {
 
     public Board(String fen) {
         setUpBoardFen(fen);
-
     }
 
     /* This method takes in a partial fen string and sets the pieces on the char board representation accordingly.
@@ -144,15 +143,21 @@ public class Board {
         int afterI = afterSq / BOARD_LENGTH;
         int afterJ = afterSq % BOARD_LENGTH;
 
-        boolean promotion = toPlay.pawnPromotionFlag();
-
         ArrayList<Piece> attackingPieces = whitesTurn ? whitePieces : blackPieces;
         ArrayList<Piece> opposingPieces = whitesTurn ? blackPieces : whitePieces;
 
         if (toPlay.isEnpassant()) {
+            Piece capturedPiece = getAndRemoveCapturedPiece(opposingPieces, beforeI * 8 + afterJ);
+
+            if (capturedPiece != null) { // always supposed to be true, but for safety i guess
+                toPlay.setCaptureFlag(true);
+                toPlay.setCapturedPiece(capturedPiece);
+            }
+
             representation[beforeI][afterJ] = '-'; // remove pawn that is was taken by enpassant (board update)
-            opposingPieces.remove(new Piece('p', beforeI * 8 + afterJ)); // piece list update
         }
+
+        boolean promotion = toPlay.pawnPromotionFlag();
 
         // updating internal board representation
         representation[beforeI][beforeJ] = '-';
@@ -160,7 +165,11 @@ public class Board {
 
 
         //updating piece arraylist
-        opposingPieces.remove(new Piece(afterSq)); // removing captured piece.
+        Piece capturedPiece = getAndRemoveCapturedPiece(opposingPieces, afterSq); // removing captured piece.
+        if (capturedPiece != null) {
+            toPlay.setCaptureFlag(true);
+            toPlay.setCapturedPiece(capturedPiece);
+        }
 
         for (Piece attackingPiece : attackingPieces) { // update squareNum of moved piece
             if (attackingPiece.getSquareNum() == beforeSq) {
@@ -171,10 +180,22 @@ public class Board {
             }
         }
 
-
         castlingUpdate(toPlay);
 
         whitesTurn = !whitesTurn;
+    }
+
+    private Piece getAndRemoveCapturedPiece(ArrayList<Piece> opposingPieces, int captureSq) {
+        Piece target = new Piece(captureSq);
+        int size = opposingPieces.size();
+        for (int i = 0; i < size; i++) {
+            Piece piece = opposingPieces.get(i);
+            if (target.equals(piece)) {
+                opposingPieces.remove(i);
+                return piece;
+            }
+        }
+        return null;
     }
 
     /* This method updates the appropriate flags and move the rook next to the king if the move is castling
@@ -229,6 +250,37 @@ public class Board {
                 piece.setSquareNum(rookAfterSq);
             }
         }
+    }
+
+    public void undoMove(Move move) {
+        boolean colorThatJustMoved = move.getPiece().isWhite();
+
+        ArrayList<Piece> attackingPieces = colorThatJustMoved ? whitePieces : blackPieces;
+        ArrayList<Piece> opposingPieces = colorThatJustMoved ? blackPieces : whitePieces;
+
+        int afterSq = move.getAfterSquare();
+        int beforeSq = move.getBeforeSquare();
+
+        //placing moved Piece back (arraylist update)
+        for (Piece piece : attackingPieces) {
+            if (piece.equals(new Piece(afterSq))) { //identified moved piece
+                piece.setSquareNum(beforeSq);
+                if (move.pawnPromotionFlag()) {
+                    char pawnRep = colorThatJustMoved ? 'P' : 'p';
+                    piece.setPieceRep(pawnRep);
+                }
+            }
+        }
+
+        //placing moved piece back (boardRep update)
+
+
+        // placing moved piece back: place piece on before sq,
+            //pawn promotion -> boardRep piece on before square becomes a pawn. and arraylist is updated
+        //captures -> place captured piece on after square. Add captured piece into Arraylist
+            //enpassant -> captured piece = goes to different position on boardRep
+        //castling -> put rook back on correct square.
+
     }
 
     public boolean whiteKSideCastle() {

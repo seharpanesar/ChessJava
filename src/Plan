@@ -46,13 +46,13 @@ Square Control
     - will have get legal moves()
 
 OTHER CHALLENGES
-    - En passant: TODO Maybe in the board class, keep track of all past moves.
+    - En passant:  Maybe in the board class, keep track of all past moves.
         - If last move was a pawn move that moved up 2 squares AND
         - that pawn is next to a opposite color pawn AND
         - both pawns are on 5th rank (OR 3rd)
         then enpassant is legal
     - Castling
-        - TODO add 6 booleans initialized in Board class as false:
+        -  add 6 booleans initialized in Board class as false:
             - WKingMove: if king has moved
             - BKingMove: ...
             - WQSideRookMove: if rook has moved

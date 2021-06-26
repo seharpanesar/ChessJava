@@ -8,7 +8,9 @@ public class Move {
     private boolean castlingFlag;
     private boolean enpassantFlag;
     private boolean pawnPromotionFlag;
+    private boolean captureFlag;
 
+    private Piece capturedPiece;
     private char promotionPiece;
 
     public Move(Piece piece, int afterSquare) {
@@ -68,5 +70,21 @@ public class Move {
         String castle = castlingFlag ? ", castle" : "";
 
         return piece.getPieceRep() + " to " + afterSquare + enpassant + promote + castle;
+    }
+
+    public boolean captureFlag() {
+        return captureFlag;
+    }
+
+    public void setCaptureFlag(boolean captureFlag) {
+        this.captureFlag = captureFlag;
+    }
+
+    public Piece getCapturedPiece() {
+        return capturedPiece;
+    }
+
+    public void setCapturedPiece(Piece capturedPiece) {
+        this.capturedPiece = capturedPiece;
     }
 }
