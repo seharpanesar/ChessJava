@@ -39,7 +39,7 @@ public class Move {
         this.castlingFlag = castlingFlag;
     }
 
-    public boolean isEnpassant() {
+    public boolean enpassantFlag() {
         return enpassantFlag;
     }
 
@@ -65,11 +65,16 @@ public class Move {
 
     @Override
     public String toString() {
-        String enpassant = enpassantFlag ? ", enpassant" : "";
+        /*String enpassant = enpassantFlag ? ", enpassant" : "";
         String promote = pawnPromotionFlag ? ", promote to " + promotionPiece: "";
         String castle = castlingFlag ? ", castle" : "";
 
         return piece.getPieceRep() + " to " + afterSquare + enpassant + promote + castle;
+         */
+        String beforeAlg = LegalMoves.squareNumToAlgebraic(beforeSquare);
+        String afterAlg = LegalMoves.squareNumToAlgebraic(afterSquare);
+
+        return beforeAlg + afterAlg;
     }
 
     public boolean captureFlag() {

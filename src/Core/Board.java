@@ -2,21 +2,24 @@ package Core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Stack;
 
 public class Board {
     final int BOARD_LENGTH = 8;
 
     private char[][] representation;
-    private ArrayList<Piece> whitePieces = new ArrayList<>();
-    private ArrayList<Piece> blackPieces = new ArrayList<>();
+    private final ArrayList<Piece> whitePieces = new ArrayList<>();
+    private final ArrayList<Piece> blackPieces = new ArrayList<>();
 
     private boolean whitesTurn;
 
     // castling flags. true means that this castling is available.
-    private boolean whiteKSideCastle = true;
-    private boolean whiteQSideCastle = true;
-    private boolean blackKSideCastle = true;
-    private boolean blackQSideCastle = true;
+    private Boolean whiteKSideCastle = false;
+    private Boolean whiteQSideCastle = false;
+    private Boolean blackKSideCastle = false;
+    private Boolean blackQSideCastle = false;
+
+    private final Stack<String> castleStates = new Stack<>(); // remembers the castle booleans. useful for undoing moves
 
     //enpassant target move
     private Move targetEPMove; // rarely used, but whn fen string indicates that enpassant can be done in that position, this is initialized
@@ -92,9 +95,6 @@ public class Board {
                 case 'q':
                     blackQSideCastle = true;
                     break;
-                default: // never should reach here so stop program safely.
-                    assert false;
-
             }
         }
 
@@ -108,6 +108,8 @@ public class Board {
 
             Piece piece = new Piece(pawnThatJustMoved, beforeSq);
             targetEPMove = new Move(piece, afterSq);
+        } else { // no enpassant = put random move
+            targetEPMove = new Move(new Piece( -100), -100);
         }
 
         //5. TODO Halfmove counter since the last capture or pawn advance
@@ -146,7 +148,7 @@ public class Board {
         ArrayList<Piece> attackingPieces = whitesTurn ? whitePieces : blackPieces;
         ArrayList<Piece> opposingPieces = whitesTurn ? blackPieces : whitePieces;
 
-        if (toPlay.isEnpassant()) {
+        if (toPlay.enpassantFlag()) {
             Piece capturedPiece = getAndRemoveCapturedPiece(opposingPieces, beforeI * 8 + afterJ);
 
             if (capturedPiece != null) { // always supposed to be true, but for safety i guess
@@ -183,29 +185,47 @@ public class Board {
         castlingUpdate(toPlay);
 
         whitesTurn = !whitesTurn;
-    }
 
-    private Piece getAndRemoveCapturedPiece(ArrayList<Piece> opposingPieces, int captureSq) {
-        Piece target = new Piece(captureSq);
-        int size = opposingPieces.size();
-        for (int i = 0; i < size; i++) {
-            Piece piece = opposingPieces.get(i);
-            if (target.equals(piece)) {
-                opposingPieces.remove(i);
-                return piece;
-            }
-        }
-        return null;
+        Driver.movesPlayed.add(toPlay);
     }
 
     /* This method updates the appropriate flags and move the rook next to the king if the move is castling
      */
 
     private void castlingUpdate(Move toPlay) {
+        rememberCastleState();
+
+        Piece movedPiece = toPlay.getPiece();
+        char currPieceRep = movedPiece.getPieceRep();
+
+        movedPiece.incrementNumMoves();
+
         int afterSq = toPlay.getAfterSquare();
         int beforeSq = toPlay.getBeforeSquare();
 
-        //if rook was captured, rook doesn't have castling rights
+        //rook moves -> no castling rights
+        if ((currPieceRep == 'r' || currPieceRep == 'R') && (movedPiece.getNumMoves() == 1)) {
+            int[] rookLocations = {WKingSideRookNum, WQueenSideRookNum, BKingSideRookNum, BQueenSideRookNum};
+            Boolean[] castleBools = {whiteKSideCastle, whiteQSideCastle, blackKSideCastle, blackQSideCastle};
+            for (int i = 0; i < 4; i++) {
+                int rookLoc = rookLocations[i];
+
+            }
+            if (beforeSq == WKingSideRookNum) {
+                whiteKSideCastle = false;
+            }
+            else if (beforeSq == WQueenSideRookNum) {
+                whiteQSideCastle = false;
+            }
+            else if (beforeSq == BKingSideRookNum) {
+                blackKSideCastle = false;
+            }
+            else if (beforeSq == BQueenSideRookNum) {
+                blackQSideCastle = false;
+            }
+        }
+
+        //rook captured -> no castling rights
         switch (afterSq) {
             case WKingSideRookNum -> whiteKSideCastle = false;
             case WQueenSideRookNum -> whiteQSideCastle = false;
@@ -214,11 +234,11 @@ public class Board {
         }
 
         // king moves = castling rights taken away for that king
-        if (whitesTurn && toPlay.getPiece().getPieceRep() == 'K') {
+        if (currPieceRep == 'K') {
             whiteKSideCastle = false;
             whiteQSideCastle = false;
         }
-         else if (!whitesTurn && toPlay.getPiece().getPieceRep() == 'k') {
+        else if (currPieceRep == 'k') {
              blackKSideCastle = false;
              blackQSideCastle = false;
         }
@@ -252,8 +272,47 @@ public class Board {
         }
     }
 
+    private void rememberCastleState() {
+        StringBuilder sb = new StringBuilder();
+        Boolean[] castleBools = {whiteKSideCastle, whiteQSideCastle, blackKSideCastle, blackQSideCastle};
+        for (Boolean bool : castleBools) {
+            if (bool) {
+                sb.append("1");
+            } else {
+                sb.append("0");
+            }
+        }
+        castleStates.push(sb.toString());
+    }
+
+    private Piece getAndRemoveCapturedPiece(ArrayList<Piece> opposingPieces, int captureSq) {
+        Piece target = new Piece(captureSq);
+        int size = opposingPieces.size();
+        for (int i = 0; i < size; i++) {
+            Piece piece = opposingPieces.get(i);
+            if (target.equals(piece)) {
+                opposingPieces.remove(i);
+                return piece;
+            }
+        }
+        return null;
+    }
+
+    // placing moved piece back: place piece on before sq,
+        //pawn promotion -> boardRep piece on before square becomes a pawn. and arraylist is updated
+    //captures -> place captured piece on after square. Add captured piece into Arraylist
+        //enpassant -> captured piece = goes to different position on boardRep
+    //castling -> put rook back on correct square. and update board Booleans
+
     public void undoMove(Move move) {
         boolean colorThatJustMoved = move.getPiece().isWhite();
+
+        Piece movedPiece = move.getPiece();
+        movedPiece.decrementNumMoves();
+
+        boolean isPromotion = move.pawnPromotionFlag();
+        boolean isCastle = move.castlingFlag();
+        boolean isCapture = move.captureFlag();
 
         ArrayList<Piece> attackingPieces = colorThatJustMoved ? whitePieces : blackPieces;
         ArrayList<Piece> opposingPieces = colorThatJustMoved ? blackPieces : whitePieces;
@@ -265,22 +324,82 @@ public class Board {
         for (Piece piece : attackingPieces) {
             if (piece.equals(new Piece(afterSq))) { //identified moved piece
                 piece.setSquareNum(beforeSq);
-                if (move.pawnPromotionFlag()) {
+                if (isPromotion) {
                     char pawnRep = colorThatJustMoved ? 'P' : 'p';
                     piece.setPieceRep(pawnRep);
                 }
             }
         }
 
+        int afterI = afterSq / BOARD_LENGTH;
+        int afterJ = afterSq % BOARD_LENGTH;
+        int beforeI = beforeSq / BOARD_LENGTH;
+        int beforeJ = beforeSq % BOARD_LENGTH;
+
         //placing moved piece back (boardRep update)
+        char movedPieceRep;
+        if (isPromotion) {
+            movedPieceRep = colorThatJustMoved ? 'P' : 'p';
+        } else {
+            movedPieceRep = movedPiece.getPieceRep();
+        }
+        representation[beforeI][beforeJ] = movedPieceRep;
+        representation[afterI][afterJ] = '-'; // may change if capture
 
+        //placing captured piece back (arraylist and board update)
+        if (isCapture) {
+            Piece capturedPiece = move.getCapturedPiece();
+            opposingPieces.add(capturedPiece);
 
-        // placing moved piece back: place piece on before sq,
-            //pawn promotion -> boardRep piece on before square becomes a pawn. and arraylist is updated
-        //captures -> place captured piece on after square. Add captured piece into Arraylist
-            //enpassant -> captured piece = goes to different position on boardRep
-        //castling -> put rook back on correct square.
+            int capPieceI = capturedPiece.getSquareNum() / 8;
+            int capPieceJ = capturedPiece.getSquareNum() % 8;
+            representation[capPieceI][capPieceJ] = capturedPiece.getPieceRep();
+        }
 
+        setPreviousCastlingRights();
+
+        //castling: put rook back on correct square
+        if (isCastle) {
+            char rookRep = colorThatJustMoved ? 'R' : 'r';
+            int rookAfterSq;
+            int rookBeforeSq;
+
+            //setting above 2 variables
+            if (afterJ - beforeJ == 2) { // king side castle
+                rookAfterSq = beforeSq + 1;
+                rookBeforeSq = beforeSq + 3;
+
+            } else {
+                rookAfterSq = beforeSq - 1;
+                rookBeforeSq = beforeSq - 4;
+            }
+
+            //identify rook and update position in list and board
+            for (Piece piece : attackingPieces) {
+                if (piece.getSquareNum() == rookAfterSq) {
+                    piece.setSquareNum(rookBeforeSq);
+                    int rookBeforeI = rookBeforeSq / 8;
+                    int rookBeforeJ = rookBeforeSq % 8;
+                    int rookAfterI = rookAfterSq / 8;
+                    int rookAfterJ = rookAfterSq % 8;
+                    representation[rookBeforeI][rookBeforeJ] = rookRep;
+                    representation[rookAfterI][rookAfterJ] = '-';
+                }
+            }
+        }
+
+        whitesTurn = !whitesTurn;
+
+        Driver.movesPlayed.remove(move);
+    }
+
+    private void setPreviousCastlingRights() {
+        String previousState = castleStates.pop();
+
+        whiteKSideCastle = previousState.charAt(0) == '1';
+        whiteQSideCastle = previousState.charAt(1) == '1';
+        blackKSideCastle = previousState.charAt(2) == '1';
+        blackQSideCastle = previousState.charAt(3) == '1';
     }
 
     public boolean whiteKSideCastle() {

@@ -4,11 +4,13 @@ public class Piece {
     private char pieceRep;
     private int squareNum;
     private final boolean isWhite;
+    private int numMoves; // only tracked for king and rook for castling rights
 
     public Piece(char pieceRep, int squareNum) {
         this.pieceRep = pieceRep;
         this.squareNum = squareNum;
         isWhite = (pieceRep >= 'A' && pieceRep <= 'Z');
+        numMoves = 0;
     }
 
     // this constructor is used for the removal of captured pieces. Only the squareNum is significant bc that alone can determine which piece to remove.
@@ -16,6 +18,7 @@ public class Piece {
         this.squareNum = squareNum;
         this.pieceRep = '?';
         isWhite = true;
+        numMoves = 0;
     }
 
     // only the square num and color have to be equal for a piece to be equal. This simplifies the removal of captured piece
@@ -46,5 +49,18 @@ public class Piece {
 
     public boolean isWhite() {
         return isWhite;
+    }
+
+
+    public void incrementNumMoves() {
+        numMoves++;
+    }
+
+    public void decrementNumMoves() {
+        numMoves--;
+    }
+
+    public int getNumMoves() {
+        return numMoves;
     }
 }

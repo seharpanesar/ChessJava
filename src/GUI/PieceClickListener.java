@@ -1,6 +1,7 @@
 package GUI;
 
 import Core.*;
+import AI.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,11 +9,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
-import static Core.Driver.movesAvailable;
+import static Core.Driver.*;
 
 public class PieceClickListener implements MouseListener {
     private final Color lightRed = new Color(255, 141, 135);
-    private final Color darkRed = new Color(242, 66, 53);
+    private final Color darkRed = new Color(250, 66, 53);
     private final Color lightYellow = new Color(250, 222, 145);
     private final Color darkYellow = new Color(232, 197, 102);
 
@@ -31,19 +32,46 @@ public class PieceClickListener implements MouseListener {
 
         SquareLabel[][] squares = BoardPanel.getSquares();
 
-        //TODO implement mate here.
         for (int i = 0; i < highlightedSq.size(); i++) {
             Pair pair = highlightedSq.get(i);
             if (pair.equals(iClicked, jClicked)) {
                 Move moveToMake = highlightedMove.get(i);
 
-                GUIFrame.makeMove(moveToMake, squares); // external board change
-
-                Driver.mainBoard.makeMove(moveToMake); // internal board change
-                Driver.movesPlayed.add(moveToMake);
+                //user move
+                playMove(moveToMake);
                 resetHighlights();
 
-                movesAvailable = LegalMoves.getAllMoves(Driver.mainBoard, Driver.mainBoard.isWhitesTurn());
+                //computer move
+                Move computerMove = null;
+                if (mainBoard.isWhitesTurn()) { // white is maximizing player
+                    int maxEval = Integer.MIN_VALUE;
+                    for (Move move : movesAvailable) {
+                        mainBoard.makeMove(move);
+                        int currPosEval = Minimax.search(3, mainBoard);
+                        if (currPosEval > maxEval) {
+                            maxEval = currPosEval;
+                            computerMove = move;
+                        }
+
+                        mainBoard.undoMove(move);
+                    }
+                }
+                else { // black is minimizing player
+                    int minEval = Integer.MAX_VALUE;
+                    for (Move move : movesAvailable) {
+                        mainBoard.makeMove(move);
+                        int currPosEval = Minimax.search(3, mainBoard);
+                        if (currPosEval < minEval) {
+                            minEval = currPosEval;
+                            computerMove = move;
+                        }
+                        mainBoard.undoMove(move);
+                    }
+                }
+
+
+                playMove(computerMove);
+
                 return;
             }
         }
@@ -85,6 +113,25 @@ public class PieceClickListener implements MouseListener {
                 highlightedSq.add(new Pair(afterI, afterJ));
                 highlightedMove.add(move);
             }
+        }
+    }
+
+    private void playMove(Move moveToMake) {
+        SquareLabel[][] squares = BoardPanel.getSquares();
+
+        GUIFrame.makeMove(moveToMake, squares); // external board change
+        Driver.mainBoard.makeMove(moveToMake); // internal board change
+        Driver.movesPlayed.add(moveToMake);
+
+        movesAvailable = LegalMoves.getAllMoves(Driver.mainBoard);
+
+        if (movesAvailable.size() == 0) { //scan for mates
+            if (SquareControl.getChecks().size() <= 1) { // at least 1 check = checkmate
+                GUIFrame.checkmate();
+            } else { // stalemate
+                GUIFrame.stalemate();
+            }
+            System.exit(0);
         }
     }
 
@@ -131,4 +178,5 @@ public class PieceClickListener implements MouseListener {
     public void mouseExited(MouseEvent e) {
 
     }
+
 }

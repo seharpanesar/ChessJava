@@ -10,6 +10,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
+import static Core.Driver.mainBoard;
+
 public class GUIFrame extends JFrame{
     final int IMAGE_LENGTH = 200;
     static ImageIcon[] images = new ImageIcon[12];
@@ -43,8 +45,6 @@ public class GUIFrame extends JFrame{
 
         this.pack();
         this.setVisible(true);
-
-        System.out.println(boardPanel.getSize());
     }
 
     /*
@@ -63,7 +63,7 @@ public class GUIFrame extends JFrame{
 
         char pieceChar = moveToMake.getPiece().getPieceRep();
 
-        if (moveToMake.isEnpassant()) { // remove pawn that is was taken by enpassant (board update)
+        if (moveToMake.enpassantFlag()) { // remove pawn that was taken by enpassant (board update)
             updateBoard(squares[beforeI][afterJ], '-');
         }
 
@@ -95,12 +95,35 @@ public class GUIFrame extends JFrame{
             //updating rook position
             updateBoard(squares[rookBeforeI][rookBeforeJ], '-');
             updateBoard(squares[rookAfterI][rookAfterJ], rookRep);
+
         }
     }
 
     private static void updateBoard(SquareLabel squareLabel, char c) {
         squareLabel.setPieceChar(c);
         squareLabel.setIcon(SquareLabel.getPieceIcon(c));
+    }
+
+    public static void checkmate() {
+        String message;
+
+        if (mainBoard.isWhitesTurn()) {
+            message = "Checkmate! You lose :(";
+        } else {
+            message = "Checkmate! You win!";
+        }
+
+        JOptionPane.showMessageDialog(null,
+                message);
+    }
+
+    public static void stalemate() {
+        JOptionPane.showMessageDialog(null,
+                "Draw by Stalemate");
+    }
+
+    public static void repaintBoard() {
+        //this.repaint();
     }
 
 }

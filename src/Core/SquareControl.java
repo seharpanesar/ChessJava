@@ -138,13 +138,6 @@ public class SquareControl {
                 threatsBitBoard.setCharAt(newSquareNum, '1');
                 rayOfSquares.add(newSquareNum);
 
-                /* if there is anything in the way (including own pieces), it will control that square, but
-                   not any further squares.
-                 */
-                if (board[newI][newJ] != '-') {
-                    break;
-                }
-
                 // if sliding piece is checking the king
                 if (newSquareNum == oppKingSquareNum) {
                         /* available squares to block the check do not include the king square, so we
@@ -153,6 +146,13 @@ public class SquareControl {
                     rayOfSquares.remove(rayOfSquares.size() - 1); //king removed from "available squares" in check object
                     checks.add(new Check(rayOfSquares, i*8 + j));
                     checkFound = true;
+                }
+
+                /* if there is anything in the way (including own pieces), it will control that square, but
+                   not any further squares.
+                 */
+                if (board[newI][newJ] != '-') {
+                    break;
                 }
             }
 
@@ -188,7 +188,6 @@ public class SquareControl {
                 if (!LegalMoves.isInBounds(newI, newJ)) {
                     break;
                 }
-                blockingPiece = board[newI][newJ];
 
                 // king found! -> pin established
                 if (newSquareNum == oppKingSquareNum) {
@@ -199,18 +198,10 @@ public class SquareControl {
 
                 rayOfSquares.add(newSquareNum);
 
-                // pin could still exist, so look deeper in that direction for opposite king
-                if (blockingPiece == '-') {
-                    continue;
-                }
+                char currSquarePiece = board[newI][newJ];
 
-                //obstruction = no pin
-                if (controlColor && LegalMoves.isWhitePiece(blockingPiece)) { // white piece found when looking for black piece
-                    break;
-                }
-
-                //obstruction = no pin
-                if (!controlColor && LegalMoves.isBlackPiece(blockingPiece)) { // black piece found when looking for  piece
+                //obstruction -> no pin. else, keep looking for king
+                if (currSquarePiece != '-') {
                     break;
                 }
             }

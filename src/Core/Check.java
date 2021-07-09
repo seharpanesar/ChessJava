@@ -7,7 +7,7 @@ public class Check {
     private final int checkerSquare;
 
     public Check(ArrayList<Integer> blockSquares, int checkerSquare) {
-        this.blockSquares = blockSquares;
+        this.blockSquares = new ArrayList<>(blockSquares); // copy of black squares
         this.checkerSquare = checkerSquare;
     }
 
@@ -16,7 +16,8 @@ public class Check {
      */
 
     public Check(int checkerSquare) {
-        blockSquares = new ArrayList<>(); // empty
+        blockSquares = new ArrayList<>(checkerSquare);
+        blockSquares.add(checkerSquare);
         this.checkerSquare = checkerSquare;
     }
 
