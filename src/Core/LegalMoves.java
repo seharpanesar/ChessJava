@@ -17,14 +17,16 @@ public class LegalMoves {
         SquareControl.calculateControlGrid(board, !gettingWhiteMoves); // sets up control grid of opposite color, checks and pins
 
         ArrayList<Move> allMoves = new ArrayList<>();
-        ArrayList<Piece> piecesToMove = gettingWhiteMoves ? board.getWhitePieces() : board.getBlackPieces();
+        ArrayList<Piece> attackingPieces = gettingWhiteMoves ? board.getWhitePieces() : board.getBlackPieces();
+        ArrayList<Piece> defendingPieces = gettingWhiteMoves ? board.getBlackPieces() : board.getWhitePieces();
+
 
         char[][] boardRep = board.getRepresentation();
 
         // rare case, but necessary: double checks. In this case, only the king can move. Optimization could be used here
         if (SquareControl.getChecks().size() == 2) {
             char kingToMove = gettingWhiteMoves ? 'K' : 'k';
-            for (Piece piece : piecesToMove) {
+            for (Piece piece : attackingPieces) {
                 if (piece.getPieceRep() == kingToMove) {
                     return getKingMove(board, piece);
                 }
@@ -40,7 +42,7 @@ public class LegalMoves {
         }
 
         // the rest of the possible piece moves are calculated
-        for (Piece piece : piecesToMove) {
+        for (Piece piece : attackingPieces) {
             char pieceRep = piece.getPieceRep();
             int squareNum = piece.getSquareNum();
 
@@ -58,6 +60,7 @@ public class LegalMoves {
             }
         }
 
+        setCapturedPieces(allMoves, defendingPieces); // keeps track of capture boolean and capture piece
 
         //in the case of checks (single checks, that is), we must filter out the moves that blunder a king
 
@@ -97,6 +100,24 @@ public class LegalMoves {
             return movesThatSaveKing;
         } else {
             return allMoves;
+        }
+    }
+
+    private static void setCapturedPieces(ArrayList<Move> allMoves, ArrayList<Piece> defendingPieces) {
+        for (Move move : allMoves) {
+            int beforeSq = move.getBeforeSquare();
+            int afterSq = move.getAfterSquare();
+
+            int beforeI = beforeSq / BOARD_LENGTH;
+            int afterJ = afterSq % BOARD_LENGTH;
+
+            int captureSq = move.enpassantFlag() ? beforeI * 8 + afterJ : afterSq;
+            for (Piece piece : defendingPieces) {
+                if (piece.getSquareNum() == captureSq) {
+                    move.setCaptureFlag(true);
+                    move.setCapturedPiece(piece);
+                }
+            }
         }
     }
 

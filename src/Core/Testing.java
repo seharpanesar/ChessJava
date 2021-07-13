@@ -7,24 +7,21 @@ public class Testing {
 
     public static void main(String[] args) {
         Testing testing = new Testing();
-        Board board = new Board();
+        Board board = new Board("");
 
-        long start = System.currentTimeMillis();
+        testing.runcode();
+
+        /*long start = System.currentTimeMillis();
         System.out.println(testing.moveGenerationTest(6, board));
         long end = System.currentTimeMillis();
 
+
+
+
+
         System.out.println("done in " + (end - start) + "ms");
 
-
-
-        /*ArrayList<Integer> testNumbers = new ArrayList<>();
-        testNumbers.add(1);
-        testNumbers.add(2);
-        testNumbers.add(3);
-        testNumbers.add(4);
-        testNumbers.add(5);
-        testNumbers.add(6);
-        testing.allTests(testNumbers);
+ */
         /*
         for (int i = 1; i < 7; i++) {
             long start = System.currentTimeMillis();
@@ -36,6 +33,12 @@ public class Testing {
 
          */
 
+    }
+
+    private void runcode() {
+        int inte = Integer.MIN_VALUE;
+        System.out.println(inte);
+        System.out.println(inte + 3);
     }
 
     public void perft(int depth, Board board) {

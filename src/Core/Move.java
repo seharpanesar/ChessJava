@@ -1,6 +1,6 @@
 package Core;
 
-public class Move {
+public class Move implements Comparable<Move> {
     private final int beforeSquare;
     private final int afterSquare;
     private final Piece piece;
@@ -12,6 +12,8 @@ public class Move {
 
     private Piece capturedPiece;
     private char promotionPiece;
+
+    private int moveScore = 0; // helps optimize alphabeta pruning. check MoveOrdering class
 
     public Move(Piece piece, int afterSquare) {
         this.beforeSquare = piece.getSquareNum();
@@ -65,12 +67,6 @@ public class Move {
 
     @Override
     public String toString() {
-        /*String enpassant = enpassantFlag ? ", enpassant" : "";
-        String promote = pawnPromotionFlag ? ", promote to " + promotionPiece: "";
-        String castle = castlingFlag ? ", castle" : "";
-
-        return piece.getPieceRep() + " to " + afterSquare + enpassant + promote + castle;
-         */
         String beforeAlg = LegalMoves.squareNumToAlgebraic(beforeSquare);
         String afterAlg = LegalMoves.squareNumToAlgebraic(afterSquare);
 
@@ -91,5 +87,14 @@ public class Move {
 
     public void setCapturedPiece(Piece capturedPiece) {
         this.capturedPiece = capturedPiece;
+    }
+
+    @Override
+    public int compareTo(Move move) {
+        return move.moveScore - moveScore;
+    }
+
+    public void setMoveScore(int moveScore) {
+        this.moveScore = moveScore;
     }
 }

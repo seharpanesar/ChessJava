@@ -22,12 +22,8 @@ public class SquareLabel extends JLabel {
             this.setIcon(pieceIcon);
         }
 
-        boolean isLightSquare = (i + j) % 2 == 0;
-        if (isLightSquare) {
-            this.setBackground(lightSq);
-        } else {
-            this.setBackground(darkSq);
-        }
+        Color color = (i + j) % 2 == 0 ? lightSq : darkSq;
+        this.setBackground(color);
     }
 
     public static ImageIcon getPieceIcon(char piece) {

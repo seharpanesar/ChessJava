@@ -1,15 +1,19 @@
 package GUI;
 
-import Core.*;
-import AI.*;
+import AI.ComputerMoveThread;
+import Core.Driver;
+import Core.LegalMoves;
+import Core.Move;
+import Core.Pair;
+import GUI.BoardPanel;
+import GUI.GUIFrame;
+import GUI.SquareLabel;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
-
-import static Core.Driver.*;
 
 public class PieceClickListener implements MouseListener {
     private final Color lightRed = new Color(255, 141, 135);
@@ -23,8 +27,12 @@ public class PieceClickListener implements MouseListener {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        int iClicked =(int) e.getPoint().getY() / BoardPanel.SQUARE_LENGTH_PX;
-        int jClicked = (int) e.getPoint().getX() / BoardPanel.SQUARE_LENGTH_PX;
+        int iClicked =(int) (e.getPoint().getY()) / BoardPanel.SQUARE_LENGTH_PX;
+        int jClicked = (int) (e.getPoint().getX()) / BoardPanel.SQUARE_LENGTH_PX;
+
+        if (!LegalMoves.isInBounds(iClicked, jClicked)) { // clicked out of bounds
+            return;
+        }
 
         /* if square clicked is one of the legal squares, then move piece. otherwise, reset light sq dark sq
          * and do following code
@@ -37,40 +45,17 @@ public class PieceClickListener implements MouseListener {
             if (pair.equals(iClicked, jClicked)) {
                 Move moveToMake = highlightedMove.get(i);
 
+                checkForPromotion(moveToMake);
+
                 //user move
-                playMove(moveToMake);
+                GUIFrame.playMove(moveToMake);
                 resetHighlights();
 
-                //computer move
-                Move computerMove = null;
-                if (mainBoard.isWhitesTurn()) { // white is maximizing player
-                    int maxEval = Integer.MIN_VALUE;
-                    for (Move move : movesAvailable) {
-                        mainBoard.makeMove(move);
-                        int currPosEval = Minimax.search(3, mainBoard);
-                        if (currPosEval > maxEval) {
-                            maxEval = currPosEval;
-                            computerMove = move;
-                        }
+                ComputerMoveThread moveThread= new ComputerMoveThread();
 
-                        mainBoard.undoMove(move);
-                    }
-                }
-                else { // black is minimizing player
-                    int minEval = Integer.MAX_VALUE;
-                    for (Move move : movesAvailable) {
-                        mainBoard.makeMove(move);
-                        int currPosEval = Minimax.search(3, mainBoard);
-                        if (currPosEval < minEval) {
-                            minEval = currPosEval;
-                            computerMove = move;
-                        }
-                        mainBoard.undoMove(move);
-                    }
-                }
+                //moveThread.start();
 
 
-                playMove(computerMove);
 
                 return;
             }
@@ -116,27 +101,39 @@ public class PieceClickListener implements MouseListener {
         }
     }
 
-    private void playMove(Move moveToMake) {
-        SquareLabel[][] squares = BoardPanel.getSquares();
+    private void checkForPromotion(Move moveToMake) {
+        if (moveToMake.pawnPromotionFlag()) {
+            ImageIcon[] images = GUIFrame.images;
 
-        GUIFrame.makeMove(moveToMake, squares); // external board change
-        Driver.mainBoard.makeMove(moveToMake); // internal board change
-        Driver.movesPlayed.add(moveToMake);
+            // Allow user to choose promotionPiece
+            ImageIcon q = images[1];
+            ImageIcon n = images[3];
+            ImageIcon b = images[4];
+            ImageIcon r = images[2];
 
-        movesAvailable = LegalMoves.getAllMoves(Driver.mainBoard);
+            ImageIcon[] options = {q, n, b, r};
+            int choice = JOptionPane.showOptionDialog(null,
+                    "What piece would you like to promote to?",
+                    "Promotion!",
+                    JOptionPane.YES_NO_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+            char promoPiece = switch (choice) {
+                case 0 -> 'Q';
+                case 1 -> 'N';
+                case 2 -> 'B';
+                case 3 -> 'R';
+                default -> '/';
+            };
 
-        if (movesAvailable.size() == 0) { //scan for mates
-            if (SquareControl.getChecks().size() <= 1) { // at least 1 check = checkmate
-                GUIFrame.checkmate();
-            } else { // stalemate
-                GUIFrame.stalemate();
-            }
-            System.exit(0);
+            moveToMake.setPromotionPiece(promoPiece);
         }
     }
 
-    private void resetHighlights() {
-        JLabel[][] squares = BoardPanel.getSquares();
+    public void resetHighlights() {
+        SquareLabel[][] squares = BoardPanel.getSquares();
 
         if (selectedPiece == null) {
             return;

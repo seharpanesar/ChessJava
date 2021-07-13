@@ -19,6 +19,8 @@ public class Board {
     private Boolean blackKSideCastle = false;
     private Boolean blackQSideCastle = false;
 
+    StringBuilder currentPGN = new StringBuilder();
+
     private final Stack<String> castleStates = new Stack<>(); // remembers the castle booleans. useful for undoing moves
 
     //enpassant target move
@@ -83,18 +85,10 @@ public class Board {
         for (int k = 0; k < castlingFieldLength; k++) {
             char castlingRight = parts[2].charAt(k);
             switch (castlingRight) {
-                case 'K':
-                    whiteKSideCastle = true;
-                    break;
-                case 'Q':
-                    whiteQSideCastle = true;
-                    break;
-                case 'k':
-                    blackKSideCastle = true;
-                    break;
-                case 'q':
-                    blackQSideCastle = true;
-                    break;
+                case 'K' -> whiteKSideCastle = true;
+                case 'Q' -> whiteQSideCastle = true;
+                case 'k' -> blackKSideCastle = true;
+                case 'q' -> blackQSideCastle = true;
             }
         }
 
@@ -149,13 +143,6 @@ public class Board {
         ArrayList<Piece> opposingPieces = whitesTurn ? blackPieces : whitePieces;
 
         if (toPlay.enpassantFlag()) {
-            Piece capturedPiece = getAndRemoveCapturedPiece(opposingPieces, beforeI * 8 + afterJ);
-
-            if (capturedPiece != null) { // always supposed to be true, but for safety i guess
-                toPlay.setCaptureFlag(true);
-                toPlay.setCapturedPiece(capturedPiece);
-            }
-
             representation[beforeI][afterJ] = '-'; // remove pawn that is was taken by enpassant (board update)
         }
 
@@ -166,11 +153,9 @@ public class Board {
         representation[afterI][afterJ] = promotion ? toPlay.getPromotionPiece() : toPlay.getPiece().getPieceRep();
 
 
-        //updating piece arraylist
-        Piece capturedPiece = getAndRemoveCapturedPiece(opposingPieces, afterSq); // removing captured piece.
-        if (capturedPiece != null) {
-            toPlay.setCaptureFlag(true);
-            toPlay.setCapturedPiece(capturedPiece);
+        //updating piece arraylist if capture
+        if (toPlay.captureFlag()) {
+            opposingPieces.remove(toPlay.getCapturedPiece());
         }
 
         for (Piece attackingPiece : attackingPieces) { // update squareNum of moved piece
@@ -184,9 +169,85 @@ public class Board {
 
         castlingUpdate(toPlay);
 
-        whitesTurn = !whitesTurn;
-
         Driver.movesPlayed.add(toPlay);
+
+        whitesTurn = !whitesTurn;
+    }
+
+    public void addMoveToPgn(Move toPlay) {
+        ArrayList<Move> movesPlayed = Driver.movesPlayed;
+        System.out.println("Moves Played : " + movesPlayed.size());
+
+        int numMovesPlayed = movesPlayed.size();
+        SquareControl.calculateControlGrid(this, !whitesTurn); // sets up control grid player who ust played, checking for checks
+
+        //castling = corner case
+        if (toPlay.castlingFlag()) { // king side
+            if (toPlay.getAfterSquare() > toPlay.getBeforeSquare()) {
+                currentPGN.append("O-O");
+            } else { // queen side
+                currentPGN.append("O-O-O");
+            }
+            checkForChecks();
+            return;
+        }
+
+        //pawn promotion = corner case
+        if (toPlay.pawnPromotionFlag()) {
+            currentPGN.append(LegalMoves.squareNumToAlgebraic(toPlay.getAfterSquare()));
+            currentPGN.append('=');
+            currentPGN.append(Character.toUpperCase(toPlay.getPiece().getPieceRep()));
+            checkForChecks();
+            return;
+        }
+
+        //assign letter to piece that moved. Pawn = no letter UNLESS it is a capture, in which case, place alg notation
+
+        char firstLetter = Character.toUpperCase(toPlay.getPiece().getPieceRep());
+
+        if (firstLetter == 'P') {
+            if (toPlay.captureFlag()) {
+                firstLetter = findFile(toPlay.getBeforeSquare());
+            } else {
+                firstLetter = '\0';
+            }
+        }
+
+        currentPGN.append(firstLetter);
+
+        if (toPlay.captureFlag()) {
+            currentPGN.append('x');
+        }
+
+        currentPGN.append(LegalMoves.squareNumToAlgebraic(toPlay.getAfterSquare()));
+        checkForChecks();
+    }
+
+    private void checkForChecks() {
+        if (SquareControl.getChecks().size() > 0) {
+            currentPGN.append("+");
+        }
+        currentPGN.append(" ");
+    }
+
+    /*
+        This method returns the a-h depending on which file the squareNum is in
+     */
+
+    private char findFile(int squareNum) {
+        int j = squareNum % 8;
+
+        return switch (j) {
+            case 0 -> 'a';
+            case 1 -> 'b';
+            case 2 -> 'c';
+            case 3 -> 'd';
+            case 4 -> 'e';
+            case 5 -> 'f';
+            case 6 -> 'g';
+            case 7 -> 'h';
+            default -> '-';
+        };
     }
 
     /* This method updates the appropriate flags and move the rook next to the king if the move is castling
@@ -205,12 +266,6 @@ public class Board {
 
         //rook moves -> no castling rights
         if ((currPieceRep == 'r' || currPieceRep == 'R') && (movedPiece.getNumMoves() == 1)) {
-            int[] rookLocations = {WKingSideRookNum, WQueenSideRookNum, BKingSideRookNum, BQueenSideRookNum};
-            Boolean[] castleBools = {whiteKSideCastle, whiteQSideCastle, blackKSideCastle, blackQSideCastle};
-            for (int i = 0; i < 4; i++) {
-                int rookLoc = rookLocations[i];
-
-            }
             if (beforeSq == WKingSideRookNum) {
                 whiteKSideCastle = false;
             }
@@ -283,19 +338,6 @@ public class Board {
             }
         }
         castleStates.push(sb.toString());
-    }
-
-    private Piece getAndRemoveCapturedPiece(ArrayList<Piece> opposingPieces, int captureSq) {
-        Piece target = new Piece(captureSq);
-        int size = opposingPieces.size();
-        for (int i = 0; i < size; i++) {
-            Piece piece = opposingPieces.get(i);
-            if (target.equals(piece)) {
-                opposingPieces.remove(i);
-                return piece;
-            }
-        }
-        return null;
     }
 
     // placing moved piece back: place piece on before sq,
@@ -432,5 +474,9 @@ public class Board {
 
     public boolean isWhitesTurn() {
         return whitesTurn;
+    }
+
+    public String getCurrentPGN() {
+        return currentPGN.toString();
     }
 }
