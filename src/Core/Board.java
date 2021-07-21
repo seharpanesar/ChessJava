@@ -176,7 +176,6 @@ public class Board {
 
     public void addMoveToPgn(Move toPlay) {
         ArrayList<Move> movesPlayed = Driver.movesPlayed;
-        System.out.println("Moves Played : " + movesPlayed.size());
 
         int numMovesPlayed = movesPlayed.size();
         SquareControl.calculateControlGrid(this, !whitesTurn); // sets up control grid player who ust played, checking for checks
@@ -370,6 +369,7 @@ public class Board {
                     char pawnRep = colorThatJustMoved ? 'P' : 'p';
                     piece.setPieceRep(pawnRep);
                 }
+                break;
             }
         }
 

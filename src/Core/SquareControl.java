@@ -236,4 +236,8 @@ public class SquareControl {
     public static String getControlGrid() {
         return controlGrid;
     }
+
+    public static boolean isCheck() {
+        return checks.size() > 0;
+    }
 }

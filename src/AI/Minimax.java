@@ -4,21 +4,135 @@ import Core.*;
 
 import java.util.ArrayList;
 
+import static AI.Stats.*;
+
 public class Minimax {
-    final static int pawnVal = 100;
-    final static int knightVal = 300;
-    final static int bishopVal = 300;
-    final static int rookVal = 500;
-    final static int queenVal = 900;
-
     public static boolean mateDetected = false;
-    public static int mateScore = Integer.MAX_VALUE;
+    public static int bestEval;
+    public static Board mainBoard = Driver.mainBoard;
 
-    public static int BOARDS_EVALUATED = 0;
+    public static Move execute() {
+        boardsEval = 0;
+        prunes = 0;
 
-    public static int evaluate(Board board) {
-        ArrayList<Piece> whitePieces = board.getWhitePieces();
-        ArrayList<Piece> blackPieces = board.getBlackPieces();
+        final long startTime = System.currentTimeMillis();
+        Move bestMove = null;
+        int highestSeenValue = Integer.MIN_VALUE;
+        int lowestSeenValue = Integer.MAX_VALUE;
+        int currentValue;
+
+        ArrayList<Move> moves = LegalMoves.getAllMoves(mainBoard);
+        for (final Move move : moves) {
+            if (move.toString().equals("b2a1")) {
+                System.out.println();
+            }
+            mainBoard.makeMove(move);
+            currentValue = mainBoard.isWhitesTurn() ?
+                    max(maxDepth - 1, highestSeenValue, lowestSeenValue) :
+                    min(maxDepth - 1, highestSeenValue, lowestSeenValue);
+
+            mainBoard.undoMove(move);
+
+            if (mainBoard.isWhitesTurn() &&
+                    currentValue >= highestSeenValue) {
+                highestSeenValue = currentValue;
+                bestMove = move;
+            } else if (!mainBoard.isWhitesTurn() &&
+                    currentValue <= lowestSeenValue) {
+                lowestSeenValue = currentValue;
+                bestMove = move;
+            }
+        }
+
+        bestEval = mainBoard.isWhitesTurn() ? highestSeenValue : lowestSeenValue;
+
+        long executionTime = System.currentTimeMillis() - startTime;
+        System.out.printf("Execution time: %d ms\n", executionTime);
+        System.out.println("Boards evaluated: " + boardsEval);
+        System.out.println("Prunes: " +  prunes);
+
+        return bestMove;
+    }
+
+    /*
+       min() corresponds to black since black is the minimizing player.
+     */
+
+    private static int min(final int depth, int alpha, int beta) {
+        if (depth == 0) {
+            boardsEval++;
+            return evaluate();
+        }
+
+        int minEval = Integer.MAX_VALUE;
+        ArrayList<Move> moves = LegalMoves.getAllMoves(mainBoard);
+
+        if (moves.size() == 0) { // mate = return mate score
+            boardsEval++;
+            if (SquareControl.isCheck()) { // black is in checkmate = good for white -> return large num
+                return checkmateVal + depth; // larger depth = mate is quicker since depth is decreasing every iteraiton
+            } else { // stalemate = draw
+                return 0;
+            }
+        }
+
+        for (final Move move : moves) {
+            mainBoard.makeMove(move);
+            int eval = max(depth - 1, alpha, beta);
+            minEval = Math.min(minEval, eval);
+            beta = Math.min(beta, eval);
+            mainBoard.undoMove(move);
+
+            /*if (beta <= alpha) {
+                break;
+            }
+
+             */
+        }
+        return minEval;
+    }
+
+    /*
+       max() corresponds to black since black is the minimizing player.
+     */
+
+    private static int max(final int depth, int alpha, int beta) {
+        if(depth == 0) {
+            boardsEval++;
+            return evaluate();
+        }
+
+        int maxEval = Integer.MIN_VALUE;
+        ArrayList<Move> moves = LegalMoves.getAllMoves(mainBoard);
+
+        if (moves.size() == 0) { // mate = return mate score
+            boardsEval++;
+            if (SquareControl.isCheck()) { // white is in checkmate = good for black -> return large negative num
+                return -(checkmateVal + depth);
+            } else { // stalemate = draw
+                return 0;
+            }
+        }
+
+        for (final Move move : moves) {
+            mainBoard.makeMove(move);
+            int eval = min(depth - 1, alpha, beta);
+            maxEval = Math.max(maxEval, eval);
+            alpha = Math.max(alpha, eval);
+            mainBoard.undoMove(move);
+
+            /*if (beta <= alpha) {
+                break;
+            }
+
+             */
+        }
+        return maxEval;
+    }
+
+    private static int evaluate() {
+        ArrayList<Piece> whitePieces = mainBoard.getWhitePieces();
+        ArrayList<Piece> blackPieces = mainBoard.getBlackPieces();
 
         int whiteCount = countMaterial(whitePieces);
         int blackCount = countMaterial(blackPieces);
@@ -31,18 +145,20 @@ public class Minimax {
             int whiteKSq = findKingSq(whitePieces);
             int blackKSq = findKingSq(blackPieces);
 
-            boolean isWhitesTurn = board.isWhitesTurn();
+            boolean isWhitesTurn = mainBoard.isWhitesTurn();
 
-            int friendlyKingSq = isWhitesTurn ? whiteKSq : blackKSq;
+
+
+            /*int friendlyKingSq = isWhitesTurn ? whiteKSq : blackKSq;
             int opponentKingSq = isWhitesTurn ? blackKSq : whiteKSq;
 
             eval += kingToEdgeEval(board, friendlyKingSq, opponentKingSq);
+
+             */
         }
 
         return eval;
     }
-
-    //TODO START HERE: incentivize OP king being in corner and incentivize moving friendly king towards op king
 
     /*
         In the endgame, checkmate needs to be delivered. Some times the engine doesn't have enough depth to
@@ -104,129 +220,4 @@ public class Minimax {
             default -> throw new IllegalStateException("Unexpected value: " + Character.toLowerCase(pieceRep));
         };
     }
-
-    public static int search(int depth, int plyFromRoot, Board board, int alpha, int beta) {
-        ArrayList<Move> availMoves = LegalMoves.getAllMoves(board);
-        MoveOrdering.orderMoves(availMoves);
-
-        if (availMoves.size() == 0) { // mate = return static evaluation
-            if (SquareControl.getChecks().size() > 0) { // checkmate
-                mateDetected = true;
-                mateScore = Math.min((plyFromRoot - 1) / 2 , mateScore);
-
-                BOARDS_EVALUATED++;
-
-                boolean whitesTurn = board.isWhitesTurn();
-                int eval = whitesTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-                eval += whitesTurn ? plyFromRoot : -plyFromRoot;
-
-                return eval;
-            } else { // stalemate = draw
-                BOARDS_EVALUATED++;
-                return 0;
-            }
-        }
-
-        if (depth == 0) { // depth reached = return static evaluation
-            BOARDS_EVALUATED++;
-            return 0;
-        }
-
-        //minimax implementation below
-
-        if (board.isWhitesTurn()) { // white is maximizing player
-            int value = Integer.MIN_VALUE;
-            for (Move move : availMoves) {
-                board.makeMove(move);
-                int currPosEval = search(depth - 1, plyFromRoot + 1, board, alpha, beta);
-                board.undoMove(move);
-
-                value = Math.max(value, currPosEval);
-
-                if (value >= beta) {
-                    break;
-                }
-
-                alpha = Math.max(alpha, value);
-            }
-            return value;
-        }
-        else { // black is minimizing player
-            int value = Integer.MAX_VALUE;
-            for (Move move : availMoves) {
-                board.makeMove(move);
-                int currPosEval = search(depth - 1, plyFromRoot + 1, board, alpha, beta);
-                board.undoMove(move);
-
-                value = Math.min(value, currPosEval);
-
-                if (value <= alpha) {
-                    break;
-                }
-
-                beta = Math.min(beta, value);
-            }
-            return value;
-        }
-    }
-
-    /*
-      This search only searched captures until a quiet position has been reached (no captures). This helps the engine
-      get a better sense of how good a sequence of moves. This is called when the normal search has reached a depth
-      of 0
-     */
-
-    private static int searchAllCaptures(Board board, int alpha, int beta, int depth) {
-        ArrayList<Move> availMoves = LegalMoves.getAllMoves(board);
-        MoveOrdering.orderMoves(availMoves);
-
-        if (depth == 0) { // quiet pos reached, return static eval
-            return evaluate(board);
-        }
-
-        //minimax implementation below
-
-        if (board.isWhitesTurn()) { // white is maximizing player
-            int value = Integer.MIN_VALUE;
-            for (Move move : availMoves) {
-                if (!move.captureFlag()) {
-                    continue;
-                }
-                board.makeMove(move);
-                int currPosEval = searchAllCaptures(board, alpha, beta, depth - 1);
-                board.undoMove(move);
-
-                value = Math.max(value, currPosEval);
-
-                if (value >= beta) {
-                    break;
-                }
-
-                alpha = Math.max(alpha, value);
-            }
-            return value;
-        }
-        else { // black is minimizing player
-            int value = Integer.MAX_VALUE;
-            for (Move move : availMoves) {
-                if (!move.captureFlag()) {
-                    continue;
-                }
-                board.makeMove(move);
-                int currPosEval = searchAllCaptures( board, alpha, beta, depth - 1);
-                board.undoMove(move);
-
-                value = Math.min(value, currPosEval);
-
-                if (value <= alpha) {
-                    break;
-                }
-
-                beta = Math.min(beta, value);
-            }
-            return value;
-        }
-    }
-
-
 }

@@ -28,7 +28,9 @@ public class LegalMoves {
             char kingToMove = gettingWhiteMoves ? 'K' : 'k';
             for (Piece piece : attackingPieces) {
                 if (piece.getPieceRep() == kingToMove) {
-                    return getKingMove(board, piece);
+                    allMoves.addAll(getKingMove(board, piece));
+                    setCapturedPieces(allMoves, defendingPieces); // keeps track of capture boolean and capture piece
+                    return allMoves;
                 }
             }
         }
@@ -258,8 +260,6 @@ public class LegalMoves {
         //used for enpassant
         int numMovesPlayed = Driver.movesPlayed.size();
         Move lastMove = (numMovesPlayed != 0) ? Driver.movesPlayed.get(numMovesPlayed - 1) : board.getTargetEPMove();
-
-        //TODO condense this code
 
         //white case
         if (isWhite) {

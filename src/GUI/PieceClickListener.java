@@ -53,10 +53,7 @@ public class PieceClickListener implements MouseListener {
 
                 ComputerMoveThread moveThread= new ComputerMoveThread();
 
-                //moveThread.start();
-
-
-
+                moveThread.start();
                 return;
             }
         }

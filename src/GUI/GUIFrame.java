@@ -1,6 +1,5 @@
 package GUI;
 
-import AI.Minimax;
 import Core.*;
 
 import javax.imageio.ImageIO;
@@ -14,6 +13,8 @@ import java.util.ArrayList;
 import static Core.Driver.*;
 import static GUI.SquareLabel.darkSq;
 import static GUI.SquareLabel.lightSq;
+
+import static AI.Stats.*;
 
 public class GUIFrame extends JFrame {
     final int IMAGE_LENGTH = 200;
@@ -84,11 +85,30 @@ public class GUIFrame extends JFrame {
     }
 
     public static void setEval(int integer) {
-        if (Minimax.mateDetected) {
-            evalLabel.setText("Mate in " + Minimax.mateScore);
+        StringBuilder toDisplay = new StringBuilder();
+
+        //values to check for mate
+        int absInteger = Math.abs(integer);
+        int diff = absInteger - checkmateVal; // number of half moves to mate
+        if (diff > 0) { // checkmate
+            int mateMoveScore = (maxDepth - diff) / 2;
+            if (integer < 0) { // white is checkmating
+                evalLabel.setText("Evaluation: Black checkmate in " + mateMoveScore);
+            } else {
+                evalLabel.setText("Evaluation: White checkmate in " + mateMoveScore);
+            }
             return;
         }
-        evalLabel.setText("Evaluation: " + integer);
+
+        toDisplay.append("Evaluation: ");
+
+        //normal evaluation
+        if (integer > 0) {
+            toDisplay.append("+");
+        }
+
+        toDisplay.append(String.format("%.2f", integer / 100.0));
+        evalLabel.setText(toDisplay.toString());
     }
 
     /*

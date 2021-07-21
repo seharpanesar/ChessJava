@@ -3,15 +3,19 @@ package Core;
 import java.util.ArrayList;
 
 public class Testing {
-    int[] recursionCall = {0,0,0,0};
-
     public static void main(String[] args) {
         Testing testing = new Testing();
-        Board board = new Board("");
+        Board board = new Board();
 
-        testing.runcode();
+        ArrayList<Integer> testNums = new ArrayList<>();
+        testNums.add(2);
+        testNums.add(3);
+        testNums.add(4);
+        testing.allTests(testNums);
 
-        /*long start = System.currentTimeMillis();
+        //testing.runcode();
+/*
+        long start = System.currentTimeMillis();
         System.out.println(testing.moveGenerationTest(6, board));
         long end = System.currentTimeMillis();
 
@@ -21,8 +25,10 @@ public class Testing {
 
         System.out.println("done in " + (end - start) + "ms");
 
+
  */
-        /*
+
+/*
         for (int i = 1; i < 7; i++) {
             long start = System.currentTimeMillis();
             System.out.println("Depth = "+ i +", moves: "+ testing.moveGenerationTest(i, board));
@@ -31,7 +37,9 @@ public class Testing {
             System.out.println("Done in " + (end - start) + " ms\n");
         }
 
-         */
+
+ */
+
 
     }
 
